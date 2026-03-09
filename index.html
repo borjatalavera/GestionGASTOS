@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="description" content="App para organizar y resumir los gastos del hogar de forma simple." />
+    <meta name="theme-color" content="#0f0f1a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+    <title>Gastos del Hogar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="index.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ========== HEADER ========== -->
+    <header class="app-header">
+        <h1>💰 Gastos del Hogar</h1>
+    </header>
+
+    <!-- ========== MAIN CONTENT (tabs) ========== -->
+    <main class="app-main">
+
+        <!-- ——— TAB 1: Nuevo Gasto ——— -->
+        <section id="tab-nuevo" class="tab-panel active">
+            <div class="card glass">
+                <h2 class="card-title">Registrar Gasto</h2>
+                <form id="form-gasto" autocomplete="off">
+                    <!-- Monto -->
+                    <div class="field">
+                        <label for="input-monto">Monto ($)</label>
+                        <input id="input-monto" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"
+                            required />
+                    </div>
+                    <!-- Tarjeta -->
+                    <div class="field">
+                        <label for="input-tarjeta">Tarjeta</label>
+                        <div class="chip-group" id="chip-group-tarjeta"></div>
+                        <input id="input-tarjeta" type="text" placeholder="Ej: Santander, Galicia, Efectivo..."
+                            list="list-tarjetas" />
+                        <datalist id="list-tarjetas"></datalist>
+                    </div>
+                    <!-- Descripción -->
+                    <div class="field">
+                        <label for="input-desc">¿De qué es el gasto?</label>
+                        <input id="input-desc" type="text" placeholder="Ej: Supermercado, Luz, Internet..." required />
+                    </div>
+                    <!-- Nota -->
+                    <div class="field">
+                        <label for="input-nota">Nota <span class="optional">(opcional)</span></label>
+                        <input id="input-nota" type="text" placeholder="Algún detalle extra..." />
+                    </div>
+                    <!-- Responsable -->
+                    <div class="field">
+                        <label for="input-responsable">¿Quién hizo el gasto? <span
+                                class="optional">(opcional)</span></label>
+                        <div class="chip-group" id="chip-group-responsable"></div>
+                        <input id="input-responsable" type="text" placeholder="Ej: Borja, Ramiro..."
+                            list="list-responsables" />
+                        <datalist id="list-responsables"></datalist>
+                    </div>
+                    <!-- Submit -->
+                    <button type="submit" id="btn-guardar" class="btn-primary">
+                        <span class="btn-icon">✓</span> Guardar Gasto
+                    </button>
+                </form>
+                <!-- Separador -->
+                <div class="divider">
+                    <span class="divider-text">o importá desde el banco</span>
+                </div>
+                <!-- Importar -->
+                <button type="button" id="btn-importar" class="btn-secondary btn-import">
+                    📂 Importar archivo del Banco
+                </button>
+                <input type="file" id="input-file-import" accept=".csv,.xlsx,.xls" hidden />
+            </div>
+            <!-- Toast de confirmación -->
+            <div id="toast" class="toast" aria-live="polite"></div>
+        </section>
+
+        <!-- ——— TAB 2: Historial ——— -->
+        <section id="tab-historial" class="tab-panel">
+            <div class="card glass">
+                <h2 class="card-title">Historial de Gastos</h2>
+                <div class="historial-filters">
+                    <div class="date-range-row">
+                        <div class="date-field">
+                            <label for="filter-desde">Desde</label>
+                            <input type="date" id="filter-desde" class="input-date" />
+                        </div>
+                        <div class="date-field">
+                            <label for="filter-hasta">Hasta</label>
+                            <input type="date" id="filter-hasta" class="input-date" />
+                        </div>
+                        <button type="button" id="btn-clear-dates" class="btn-clear-dates"
+                            title="Limpiar filtros">✕</button>
+                    </div>
+                    <div class="date-shortcuts">
+                        <button type="button" class="chip date-shortcut" data-range="today">Hoy</button>
+                        <button type="button" class="chip date-shortcut" data-range="week">Última semana</button>
+                        <button type="button" class="chip date-shortcut" data-range="month">Este mes</button>
+                        <button type="button" class="chip date-shortcut" data-range="all">Todo</button>
+                    </div>
+                </div>
+                <div id="lista-gastos" class="lista-gastos">
+                    <p class="empty-state">Aún no hay gastos registrados. ¡Agregá uno! ➕</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ——— TAB 3: Resumen ——— -->
+        <section id="tab-resumen" class="tab-panel">
+            <div class="card glass">
+                <h2 class="card-title">📊 Resumen</h2>
+                <!-- Filtros -->
+                <div class="resumen-filters">
+                    <select id="filter-mes" class="select-filter">
+                        <option value="todos">Todos los meses</option>
+                    </select>
+                    <select id="filter-tarjeta" class="select-filter">
+                        <option value="todas">Todas las tarjetas</option>
+                    </select>
+                    <select id="filter-responsable" class="select-filter">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <!-- Panel de totales -->
+                <div id="resumen-content" class="resumen-content">
+                    <div class="total-card highlight">
+                        <span class="total-label">Total General</span>
+                        <span class="total-value" id="resumen-total">$0.00</span>
+                    </div>
+                    <div id="resumen-tarjetas" class="breakdown-section"></div>
+                    <div id="resumen-responsables" class="breakdown-section"></div>
+                    <div id="resumen-cantidad" class="meta-info"></div>
+                </div>
+                <!-- Exportar -->
+                <div class="export-buttons">
+                    <button id="btn-exportar" class="btn-secondary">
+                        📥 CSV
+                    </button>
+                    <button id="btn-exportar-pdf" class="btn-secondary btn-pdf">
+                        📤 Compartir
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========== BOTTOM TAB BAR ========== -->
+    <nav class="tab-bar" id="tab-bar">
+        <button class="tab-btn active" data-tab="tab-nuevo" id="btn-tab-nuevo">
+            <span class="tab-icon">➕</span>
+            <span class="tab-label">Nuevo</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-historial" id="btn-tab-historial">
+            <span class="tab-icon">📋</span>
+            <span class="tab-label">Historial</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-resumen" id="btn-tab-resumen">
+            <span class="tab-icon">📊</span>
+            <span class="tab-label">Resumen</span>
+        </button>
+    </nav>
+
+    <!-- Modal de confirmación para borrar -->
+    <div id="modal-delete" class="modal-overlay" hidden>
+        <div class="modal-card glass">
+            <p>¿Estás segura de que querés eliminar este gasto?</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn-secondary">Cancelar</button>
+                <button id="modal-confirm" class="btn-danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de importación -->
+    <div id="modal-import" class="modal-overlay" hidden>
+        <div class="modal-card modal-import-card glass">
+            <h3 class="modal-import-title">📂 Importar del Banco</h3>
+
+            <!-- Paso 1: Configurar columnas -->
+            <div id="import-step-config" class="import-step">
+                <p class="import-info">Seleccioná qué columna corresponde a cada dato:</p>
+
+                <div class="field">
+                    <label for="import-col-monto">Columna de Monto</label>
+                    <select id="import-col-monto" class="select-filter"></select>
+                </div>
+                <div class="field">
+                    <label for="import-col-desc">Columna de Descripción</label>
+                    <select id="import-col-desc" class="select-filter"></select>
+                </div>
+                <div class="field">
+                    <label for="import-col-fecha">Columna de Fecha <span class="optional">(opcional)</span></label>
+                    <select id="import-col-fecha" class="select-filter">
+                        <option value="_none">No importar (usar fecha de hoy)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="import-tarjeta">¿De qué tarjeta es este archivo?</label>
+                    <input id="import-tarjeta" type="text" placeholder="Ej: Santander, Galicia..." />
+                </div>
+
+                <!-- Preview -->
+                <div id="import-preview" class="import-preview"></div>
+
+                <div class="modal-actions">
+                    <button id="import-cancel" class="btn-secondary">Cancelar</button>
+                    <button id="import-confirm" class="btn-primary">Importar</button>
+                </div>
+            </div>
+
+            <!-- Paso 2: Resultado -->
+            <div id="import-step-result" class="import-step" hidden>
+                <p id="import-result-text" class="import-result-text"></p>
+                <button id="import-done" class="btn-primary">Listo ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
+    </script>
+</body>
+
+</html>
