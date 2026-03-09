@@ -18,6 +18,7 @@
         rel="stylesheet" />
     <link rel="stylesheet" href="index.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 
 <body>
@@ -35,11 +36,16 @@
             <div class="card glass">
                 <h2 class="card-title">Registrar Gasto</h2>
                 <form id="form-gasto" autocomplete="off">
-                    <!-- Monto -->
                     <div class="field">
                         <label for="input-monto">Monto ($)</label>
-                        <input id="input-monto" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"
-                            required />
+                        <div class="input-with-action">
+                            <input id="input-monto" type="number" inputmode="decimal" step="0.01" min="0"
+                                placeholder="0.00" required />
+                            <button type="button" id="btn-scan-ticket" class="btn-scan" title="Escanear ticket">
+                                📷 Escanear
+                            </button>
+                        </div>
+                        <input type="file" id="input-camera" accept="image/*" capture="environment" hidden />
                     </div>
                     <!-- Tarjeta -->
                     <div class="field">
@@ -280,6 +286,15 @@
                     <button type="submit" class="btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Overlay de Carga OCR -->
+    <div id="loading-ocr" class="modal-overlay" hidden>
+        <div class="modal-card loading-card glass">
+            <div class="spinner"></div>
+            <p><strong>Escaneando ticket...</strong></p>
+            <p style="font-size: .8rem; color: var(--text-dim);">Esto puede tardar unos segundos.</p>
         </div>
     </div>
 

@@ -978,6 +978,118 @@ btnAplicarFijos.addEventListener('click', () => {
   }, 1000);
 });
 
+// ——— OCR: ESCANEO DE TICKETS ———
+const btnScanTicket = $('#btn-scan-ticket');
+const inputCamera = $('#input-camera');
+const loadingOCR = $('#loading-ocr');
+
+btnScanTicket.addEventListener('click', () => {
+  inputCamera.value = '';
+  inputCamera.click();
+});
+
+inputCamera.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  loadingOCR.hidden = false;
+
+  try {
+    const result = await processOCR(file);
+    if (result) {
+      if (result.monto) inputMonto.value = result.monto.toFixed(2);
+      if (result.comercio) inputDesc.value = result.comercio;
+      showToast('✓ Ticket escaneado con éxito');
+    } else {
+      showToast('⚠️ No se detectaron datos claros');
+    }
+  } catch (err) {
+    console.error('OCR Error:', err);
+    showToast('❌ Error al procesar la imagen');
+  } finally {
+    loadingOCR.hidden = true;
+  }
+});
+
+async function processOCR(file) {
+  // We use Tesseract.js to read the image
+  const worker = await Tesseract.createWorker('spa'); // Spanish
+  const { data: { text } } = await worker.recognize(file);
+  await worker.terminate();
+
+  console.log('Texto detectado:', text);
+  return parseOCRText(text);
+}
+
+function parseOCRText(text) {
+  const lines = text.split('\n').filter(l => l.trim().length > 0);
+  if (lines.length === 0) return null;
+
+  let monto = null;
+  let comercio = null;
+
+  // 1. Try to find the total amount
+  // We look for the largest number near words like TOTAL, SUMA, IMPORTE o $
+  const totalKeywords = ['total', 'suma', 'importe', 'monto', 'pago', 'final', 'consumo', 'neto'];
+  let candidates = [];
+
+  // Regex to match money amounts: $ 1.234,56 or 1234.56
+  const moneyRegex = /[\d.,]+/g;
+
+  lines.forEach((line, index) => {
+    const lower = line.toLowerCase();
+    const hasTotalKw = totalKeywords.some(kw => lower.includes(kw));
+
+    const matches = line.match(moneyRegex);
+    if (matches) {
+      matches.forEach(m => {
+        const val = parseMontoOCR(m);
+        if (val && val > 0) {
+          // Give more weight if it's near a keyword or at the end of the line
+          candidates.push({ val, lineIndex: index, priority: hasTotalKw ? 5 : 1 });
+        }
+      });
+    }
+  });
+
+  if (candidates.length > 0) {
+    // We prefer the largest value that is usually at the bottom (higher lineIndex)
+    // and has higher priority (near keywords)
+    candidates.sort((a, b) => (b.priority * b.val) - (a.priority * a.val));
+    monto = candidates[0].val;
+  }
+
+  // 2. Try to find the commerce name
+  // Usually the first line with actual text (not date or time)
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const line = lines[i].trim();
+    // Skip if it looks like a date or only numbers
+    if (!/^\d/.test(line) && line.length > 3) {
+      comercio = line.charAt(0).toUpperCase() + line.slice(1).toLowerCase();
+      break;
+    }
+  }
+
+  return { monto, comercio };
+}
+
+function parseMontoOCR(str) {
+  // Similar to parseMonto in banker import but more permissive
+  let s = str.replace(/[$, ]/g, '');
+  // Argentine format 1.234,56 -> 1234.56
+  if (s.includes(',') && s.includes('.')) {
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 // ——— INIT ———
 function init() {
   renderChips();
