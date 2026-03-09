@@ -3,11 +3,11 @@
 
 const CACHE_NAME = 'gastos-hogar-v1';
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/index.css',
-    '/app.js',
-    '/manifest.json'
+    './',
+    './index.html',
+    './index.css',
+    './app.js',
+    './manifest.json'
 ];
 
 // Install: cache core assets
