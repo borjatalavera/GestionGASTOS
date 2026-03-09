@@ -113,6 +113,7 @@ tabBtns.forEach(btn => {
     $(`#${target}`).classList.add('active');
     // Re-render relevant tab
     if (target === 'tab-historial') renderHistorial();
+    if (target === 'tab-fijos') renderFijos();
     if (target === 'tab-resumen') renderResumen();
   });
 });
@@ -841,11 +842,148 @@ importDone.addEventListener('click', () => {
   importedHeaders = [];
 });
 
+// ——— GASTOS FIJOS ———
+const btnNuevoFijo = $('#btn-nuevo-fijo');
+const listaFijos = $('#lista-fijos');
+const modalFijo = $('#modal-fijo');
+const formFijo = $('#form-fijo');
+const btnFijoCancel = $('#btn-fijo-cancel');
+const fijosApplyContainer = $('#fijos-apply-container');
+const btnAplicarFijos = $('#btn-aplicar-fijos');
+
+function getFijos() {
+  return JSON.parse(localStorage.getItem('gastos_fijos') || '[]');
+}
+function saveFijos(fijos) {
+  localStorage.setItem('gastos_fijos', JSON.stringify(fijos));
+}
+
+function renderFijos() {
+  const fijos = getFijos();
+
+  if (fijos.length === 0) {
+    listaFijos.innerHTML = '<p class="empty-state">No hay gastos fijos configurados aún. 🏠</p>';
+    fijosApplyContainer.hidden = true;
+    return;
+  }
+
+  fijosApplyContainer.hidden = false;
+  listaFijos.innerHTML = fijos.map(f => `
+    <div class="gasto-item">
+      <span class="gasto-icon">📌</span>
+      <div class="gasto-info">
+        <div class="gasto-desc">${f.descripcion}</div>
+        <div class="gasto-meta">${f.tarjeta}</div>
+      </div>
+      <span class="gasto-amount">${formatMoney(f.monto)}</span>
+      <div class="fijo-actions">
+        <button class="btn-edit-small" onclick="editarFijo('${f.id}')" title="Editar">✏️</button>
+        <button class="gasto-delete" onclick="borrarFijo('${f.id}')" title="Borrar">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+btnNuevoFijo.addEventListener('click', () => {
+  $('#modal-fijo-title').textContent = 'Nuevo Gasto Fijo';
+  $('#input-fijo-id').value = '';
+  formFijo.reset();
+  modalFijo.hidden = false;
+});
+
+btnFijoCancel.addEventListener('click', () => {
+  modalFijo.hidden = true;
+});
+
+formFijo.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = $('#input-fijo-id').value;
+  const descripcion = $('#input-fijo-desc').value.trim();
+  const monto = parseFloat($('#input-fijo-monto').value);
+  const tarjeta = $('#input-fijo-tarjeta').value.trim();
+
+  if (!descripcion || isNaN(monto) || !tarjeta) return;
+
+  let fijos = getFijos();
+  if (id) {
+    // Editar
+    fijos = fijos.map(f => f.id === id ? { ...f, descripcion, monto, tarjeta } : f);
+  } else {
+    // Nuevo
+    fijos.push({
+      id: Date.now().toString(36),
+      descripcion,
+      monto,
+      tarjeta
+    });
+  }
+
+  saveFijos(fijos);
+  modalFijo.hidden = true;
+  renderFijos();
+  showToast('Gasto fijo guardado');
+});
+
+window.editarFijo = (id) => {
+  const fijos = getFijos();
+  const fijo = fijos.find(f => f.id === id);
+  if (!fijo) return;
+
+  $('#modal-fijo-title').textContent = 'Editar Gasto Fijo';
+  $('#input-fijo-id').value = fijo.id;
+  $('#input-fijo-desc').value = fijo.descripcion;
+  $('#input-fijo-monto').value = fijo.monto;
+  $('#input-fijo-tarjeta').value = fijo.tarjeta;
+  modalFijo.hidden = false;
+};
+
+window.borrarFijo = (id) => {
+  if (confirm('¿Eliminar este gasto fijo?')) {
+    const fijos = getFijos().filter(f => f.id !== id);
+    saveFijos(fijos);
+    renderFijos();
+  }
+};
+
+btnAplicarFijos.addEventListener('click', () => {
+  const fijos = getFijos();
+  if (fijos.length === 0) return;
+
+  const gastos = getGastos();
+  const hoy = new Date().toISOString();
+
+  fijos.forEach(f => {
+    gastos.unshift({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      fecha: hoy,
+      monto: f.monto,
+      tarjeta: f.tarjeta,
+      descripcion: f.descripcion,
+      nota: 'Gasto Fijo',
+      responsable: null
+    });
+  });
+
+  saveGastos(gastos);
+  showToast(`✅ ${fijos.length} gastos fijos aplicados al historial`);
+
+  // Refresh and switch to history to show results
+  renderHistorial();
+  renderResumen();
+
+  // Optional: Auto-switch to history tab
+  setTimeout(() => {
+    const tabHist = $('#btn-tab-historial');
+    if (tabHist) tabHist.click();
+  }, 1000);
+});
+
 // ——— INIT ———
 function init() {
   renderChips();
   renderHistorial();
   renderResumen();
+  renderFijos();
 }
 
 init();

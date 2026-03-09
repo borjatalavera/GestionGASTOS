@@ -144,6 +144,7 @@ body {
   transition: border var(--transition), box-shadow var(--transition);
   min-height: 48px;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .field input:focus,
@@ -707,7 +708,9 @@ body {
   line-height: 1.5;
 }
 
-.import-step {}
+.import-step {
+  /* No specific styles for steps */
+}
 
 /* Preview table */
 .import-preview {
@@ -748,6 +751,88 @@ body {
   font-size: .75rem;
   color: var(--text-dim);
   margin-bottom: 6px;
+}
+
+/* ——— FIJOS TAB ——— */
+.fijos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.fijos-header .card-title {
+  margin-bottom: 0;
+}
+
+.btn-add-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transition: transform var(--transition);
+}
+
+.btn-add-circle:active {
+  transform: scale(.9);
+}
+
+.fijos-info {
+  font-size: .82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.fijos-actions {
+  margin-top: 24px;
+}
+
+.btn-apply {
+  background: linear-gradient(135deg, var(--green), #2db374) !important;
+  box-shadow: 0 4px 20px var(--green-glow) !important;
+}
+
+/* Modal Fijo */
+.modal-fijo-card {
+  max-width: 400px !important;
+  text-align: left !important;
+}
+
+.modal-fijo-card h3 {
+  margin-bottom: 20px;
+}
+
+.gasto-item .fijo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit-small {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  cursor: pointer;
+}
+
+.btn-edit-small:active {
+  background: rgba(255, 255, 255, .1);
 }
 
 .import-result-text {
